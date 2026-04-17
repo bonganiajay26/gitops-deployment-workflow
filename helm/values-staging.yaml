@@ -1,0 +1,30 @@
+replicaCount: 2
+
+image:
+  tag: "PLACEHOLDER_SHA"   # replaced by CI pipeline via sed
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  host: staging.yourdomain.com
+  tls: false
+
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "100m"
+  limits:
+    memory: "128Mi"
+    cpu: "250m"
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 60
+
+env:
+  FLASK_ENV: staging
+  PORT: "5000"

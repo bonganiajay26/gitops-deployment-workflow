@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: python-devops-project
+  namespace: argocd
+spec:
+  description: Python DevOps App — GitOps managed project
+  sourceRepos:
+    - https://github.com/YOUR_ORG/app-gitops
+    - https://charts.helm.sh/stable
+  destinations:
+    - namespace: production
+      server: https://kubernetes.default.svc
+    - namespace: staging
+      server: https://kubernetes.default.svc
+    - namespace: dev
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceBlacklist:
+    - group: ""
+      kind: ResourceQuota
+    - group: ""
+      kind: LimitRange
+  roles:
+    - name: developer
+      description: Developer read-only access
+      policies:
+        - p, proj:python-devops-project:developer, applications, get, python-devops-project/*, allow
+        - p, proj:python-devops-project:developer, applications, sync, python-devops-project/dev, allow
+      groups:
+        - developers
+    - name: ops
+      description: Ops full access
+      policies:
+        - p, proj:python-devops-project:ops, applications, *, python-devops-project/*, allow
+      groups:
+        - ops-team

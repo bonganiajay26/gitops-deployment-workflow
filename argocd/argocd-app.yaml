@@ -1,0 +1,84 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: python-devops-app-production
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: python-devops-project
+  source:
+    repoURL: https://github.com/YOUR_ORG/app-gitops
+    targetRevision: main
+    path: environments/production
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    automated:
+      prune: true       # delete resources removed from Git
+      selfHeal: true    # auto-revert manual cluster changes
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10
+---
+# Staging environment
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: python-devops-app-staging
+  namespace: argocd
+spec:
+  project: python-devops-project
+  source:
+    repoURL: https://github.com/YOUR_ORG/app-gitops
+    targetRevision: main
+    path: environments/staging
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Dev environment
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: python-devops-app-dev
+  namespace: argocd
+spec:
+  project: python-devops-project
+  source:
+    repoURL: https://github.com/YOUR_ORG/app-gitops
+    targetRevision: main
+    path: environments/dev
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

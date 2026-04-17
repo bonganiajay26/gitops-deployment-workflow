@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  # Slack notification service
+  service.slack: |
+    token: $slack-token
+
+  # Trigger: notify on sync success
+  trigger.on-sync-succeeded: |
+    - when: app.status.operationState.phase in ['Succeeded']
+      send: [app-sync-succeeded]
+
+  # Trigger: notify on sync failure
+  trigger.on-sync-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send: [app-sync-failed]
+
+  # Trigger: notify on app degraded
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]
+
+  # Template: sync succeeded
+  template.app-sync-succeeded: |
+    slack:
+      attachments: |
+        [{
+          "color": "#18be52",
+          "title": "✅ {{.app.metadata.name}} synced successfully",
+          "fields": [
+            {"title": "Environment", "value": "{{.app.spec.destination.namespace}}", "short": true},
+            {"title": "Revision", "value": "{{.app.status.sync.revision | truncate 8 \"...\"}}", "short": true},
+            {"title": "Sync Status", "value": "{{.app.status.sync.status}}", "short": true},
+            {"title": "Health", "value": "{{.app.status.health.status}}", "short": true}
+          ],
+          "actions": [{"type": "button", "text": "View in ArgoCD", "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"}]
+        }]
+
+  # Template: sync failed
+  template.app-sync-failed: |
+    slack:
+      attachments: |
+        [{
+          "color": "#E96D76",
+          "title": "❌ {{.app.metadata.name}} sync FAILED",
+          "fields": [
+            {"title": "Error", "value": "{{.app.status.operationState.message}}", "short": false},
+            {"title": "Environment", "value": "{{.app.spec.destination.namespace}}", "short": true}
+          ],
+          "actions": [{"type": "button", "text": "Investigate", "url": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}"}]
+        }]
+
+  # Template: health degraded
+  template.app-health-degraded: |
+    slack:
+      attachments: |
+        [{
+          "color": "#f4c030",
+          "title": "⚠️ {{.app.metadata.name}} health DEGRADED",
+          "fields": [
+            {"title": "Health Status", "value": "{{.app.status.health.status}}", "short": true},
+            {"title": "Namespace", "value": "{{.app.spec.destination.namespace}}", "short": true}
+          ]
+        }]
+---
+# Annotation on each ArgoCD Application to subscribe to notifications
+# Add these to argocd-app.yaml metadata.annotations:
+# notifications.argoproj.io/subscribe.on-sync-succeeded.slack: devops-alerts
+# notifications.argoproj.io/subscribe.on-sync-failed.slack: devops-alerts
+# notifications.argoproj.io/subscribe.on-health-degraded.slack: devops-alerts

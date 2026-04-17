@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: staging
+namePrefix: staging-
+resources:
+  - ../../base
+commonLabels:
+  environment: staging
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+    target:
+      kind: Deployment
+      name: python-devops-app
+  - patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "64Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "128Mi"
+    target:
+      kind: Deployment
+      name: python-devops-app
+images:
+  - name: YOUR_DOCKERHUB_USERNAME/python-devops-app
+    newTag: PLACEHOLDER_SHA

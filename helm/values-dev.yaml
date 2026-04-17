@@ -1,0 +1,25 @@
+replicaCount: 1
+
+image:
+  tag: "latest"
+
+service:
+  type: NodePort
+
+ingress:
+  enabled: false
+
+resources:
+  requests:
+    memory: "32Mi"
+    cpu: "50m"
+  limits:
+    memory: "64Mi"
+    cpu: "100m"
+
+hpa:
+  enabled: false
+
+env:
+  FLASK_ENV: development
+  PORT: "5000"

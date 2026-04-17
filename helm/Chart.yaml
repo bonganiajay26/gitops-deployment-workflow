@@ -1,0 +1,14 @@
+apiVersion: v2
+name: python-devops-app
+description: Python Flask DevOps Application — Helm Chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: DevOps Team
+    email: devops@yourcompany.com
+keywords:
+  - python
+  - flask
+  - devops
+  - kubernetes
