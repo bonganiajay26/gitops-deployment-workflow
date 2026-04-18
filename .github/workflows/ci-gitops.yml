@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 env:
-  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/python-devops-app
-  GITOPS_REPO: ${{ secrets.GITOPS_REPO }}        # e.g. org/app-gitops
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME != '' && secrets.DOCKER_USERNAME || 'bonganiajay26' }}/python-devops-app
+  GITOPS_REPO: ${{ secrets.GITOPS_REPO }}
   GITOPS_ENV_PATH: environments/production
 
 jobs:
@@ -46,6 +46,7 @@ jobs:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
     needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     outputs:
       image-tag: ${{ steps.vars.outputs.sha }}
     steps:
@@ -86,7 +87,7 @@ jobs:
     name: Update GitOps Repo
     runs-on: ubuntu-latest
     needs: build-push
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.GITOPS_TOKEN != ''
     steps:
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
@@ -101,7 +102,6 @@ jobs:
           IMAGE_TAG=${{ needs.build-push.outputs.image-tag }}
           sed -i "s|tag:.*|tag: \"${IMAGE_TAG}\"|" ${{ env.GITOPS_ENV_PATH }}/values.yaml
           echo "Updated image tag to: ${IMAGE_TAG}"
-          cat ${{ env.GITOPS_ENV_PATH }}/values.yaml
 
       - name: Commit and push image tag update
         run: |
@@ -109,6 +109,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add ${{ env.GITOPS_ENV_PATH }}/values.yaml
-          git commit -m "chore: update production image to ${{ needs.build-push.outputs.image-tag }} [skip ci]"
+          git diff --staged --quiet || git commit -m "chore: update production image to ${{ needs.build-push.outputs.image-tag }} [skip ci]"
           git push
           echo "GitOps repo updated — ArgoCD will sync automatically"
