@@ -7,9 +7,7 @@ on:
     branches: [main]
 
 env:
-  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME != '' && secrets.DOCKER_USERNAME || 'bonganiajay26' }}/python-devops-app
-  GITOPS_REPO: ${{ secrets.GITOPS_REPO }}
-  GITOPS_ENV_PATH: environments/production
+  IMAGE_NAME: python-devops-app
 
 jobs:
   # ─────────────────────────────────────────────
@@ -41,6 +39,7 @@ jobs:
 
   # ─────────────────────────────────────────────
   # JOB 2: Build & Push Docker Image
+  # Runs only on push to main (not on PRs)
   # ─────────────────────────────────────────────
   build-push:
     name: Build & Push Docker Image
@@ -71,8 +70,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.sha }}
-            ${{ env.IMAGE_NAME }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -87,12 +86,12 @@ jobs:
     name: Update GitOps Repo
     runs-on: ubuntu-latest
     needs: build-push
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.GITOPS_TOKEN != ''
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
-          repository: ${{ env.GITOPS_REPO }}
+          repository: ${{ secrets.GITOPS_REPO }}
           token: ${{ secrets.GITOPS_TOKEN }}
           path: gitops
 
@@ -100,7 +99,7 @@ jobs:
         run: |
           cd gitops
           IMAGE_TAG=${{ needs.build-push.outputs.image-tag }}
-          sed -i "s|tag:.*|tag: \"${IMAGE_TAG}\"|" ${{ env.GITOPS_ENV_PATH }}/values.yaml
+          sed -i "s|tag:.*|tag: \"${IMAGE_TAG}\"|" environments/production/values.yaml
           echo "Updated image tag to: ${IMAGE_TAG}"
 
       - name: Commit and push image tag update
@@ -108,7 +107,7 @@ jobs:
           cd gitops
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ${{ env.GITOPS_ENV_PATH }}/values.yaml
+          git add environments/production/values.yaml
           git diff --staged --quiet || git commit -m "chore: update production image to ${{ needs.build-push.outputs.image-tag }} [skip ci]"
           git push
           echo "GitOps repo updated — ArgoCD will sync automatically"
