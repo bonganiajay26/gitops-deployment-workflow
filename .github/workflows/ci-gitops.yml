@@ -87,6 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-push
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.build-push.result == 'success'
+    continue-on-error: true
     steps:
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
